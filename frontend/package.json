@@ -1,0 +1,9 @@
+{
+  "name": "campus-lost-found-frontend",
+  "version": "1.0.0",
+  "description": "Campus Lost & Found Web Portal - Frontend",
+  "main": "index.html",
+  "keywords": ["lost", "found", "campus"],
+  "author": "College Student",
+  "license": "MIT"
+}

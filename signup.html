@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Campus Lost & Found</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-logo">
+                🔍 Campus Lost & Found
+            </div>
+            <ul class="navbar-menu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="view-lost.html">Lost Items</a></li>
+                <li><a href="view-found.html">Found Items</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Sign Up Form -->
+    <section class="auth-section">
+        <div class="auth-container">
+            <div class="auth-form">
+                <h2>Create Account</h2>
+                <p class="auth-subtitle">Join our community to report lost or found items</p>
+
+                <form id="signupForm" class="form">
+                    <div class="form-group">
+                        <label for="fullName">Full Name</label>
+                        <input type="text" id="fullName" name="fullName" required placeholder="John Doe">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required placeholder="johndoe">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" required placeholder="john@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required placeholder="At least 6 characters">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Confirm password">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+                </form>
+
+                <!-- Success/Error Messages -->
+                <div id="signupMessage" class="message" style="display:none;"></div>
+
+                <p class="auth-footer">
+                    Already have an account? <a href="login.html">Login here</a>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Campus Lost & Found Portal. All rights reserved.</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Handle signup form submission
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const fullName = document.getElementById('fullName').value.trim();
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validate passwords match
+            if (password !== confirmPassword) {
+                showMessage('Passwords do not match!', 'error');
+                return;
+            }
+
+            // Validate password length
+            if (password.length < 6) {
+                showMessage('Password must be at least 6 characters long!', 'error');
+                return;
+            }
+
+            // Validate full name
+            if (fullName.length === 0) {
+                showMessage('Full name is required!', 'error');
+                return;
+            }
+
+            // Validate username
+            if (username.length < 3) {
+                showMessage('Username must be at least 3 characters!', 'error');
+                return;
+            }
+
+            // Validate email format
+            const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+            if (!emailRegex.test(email)) {
+                showMessage('Please enter a valid email address!', 'error');
+                return;
+            }
+
+            try {
+                showMessage('Creating account...', 'info');
+
+                // Use the apiPost utility function
+                const data = await apiPost('/auth/signup', {
+                    fullName,
+                    username,
+                    email,
+                    password,
+                });
+
+                if (data.success) {
+                    // Store token and user info
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    showMessage('Account created successfully! Redirecting...', 'success');
+                    
+                    // Clear form
+                    document.getElementById('signupForm').reset();
+                    
+                    // Redirect to dashboard after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                } else {
+                    // Show specific error message from backend
+                    const errorMessage = data.message || 'Error creating account';
+                    
+                    // If there are validation errors, show them
+                    if (data.errors && Array.isArray(data.errors)) {
+                        const errorList = data.errors.map(err => err.msg).join(', ');
+                        showMessage(`Validation Error: ${errorList}`, 'error');
+                    } else {
+                        showMessage(errorMessage, 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                
+                // Show specific error message
+                let errorMessage = 'Error creating account. Please check your internet connection and try again.';
+                
+                if (error.message === 'No authentication token found') {
+                    errorMessage = 'Authentication error. Please refresh and try again.';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMessage = 'Cannot connect to server. Make sure backend is running on port 5000.';
+                } else if (error.message) {
+                    errorMessage = `Error: ${error.message}`;
+                }
+                
+                showMessage(errorMessage, 'error');
+            }
+        });
+
+        // Show message function with message type styling
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('signupMessage');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            
+            // Auto-hide success message after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>

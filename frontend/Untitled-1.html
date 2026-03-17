@@ -1,0 +1,18 @@
+
+<!DOCTYPE html>
+<html>
+<body>
+<p>Convert celcius to faranheit value</p>
+<p>Celcius Value:<input id="txtCelcius" onkeyup="convert('C')" /></p>
+<p>Farenhit Value:<input id="txtFahrenhit" onkeyup="convert('F')" /></p>
+<script>
+function convert(degree) { var p;
+if (degree == "C") {
+p = (document.getElementById("txtCelcius").value * 9) / 5 + 32; document.getElementById("txtFahrenhit").value = Math.round(p);
+} else {
+p = ((document.getElementById("txtFahrenhit").value - 32) * 5) / 9; document.getElementById("txtCelcius").value = Math.round(p);
+}
+}
+</script>
+</body>
+</html>

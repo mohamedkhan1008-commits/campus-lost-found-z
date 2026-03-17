@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Found Items - Campus Lost & Found</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-logo">
+                🔍 Campus Lost & Found
+            </div>
+            <ul class="navbar-menu" id="navbarMenu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="view-lost.html">Lost Items</a></li>
+                <li><a href="view-found.html" class="active">Found Items</a></li>
+                <li><a href="contact.html">Contact</a></li>
+                <li id="authLinks">
+                    <a href="login.html" class="btn-login">Login</a>
+                </li>
+                <li id="userLinks" style="display:none;">
+                    <a href="dashboard.html" class="btn-dashboard">Dashboard</a>
+                    <button onclick="logoutUser()" class="btn-logout">Logout</button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <h1>Found Items</h1>
+        <p>Claim your lost items here</p>
+    </section>
+
+    <!-- Filter Section -->
+    <section class="filter-section">
+        <div class="filter-container">
+            <div class="filter-group">
+                <label for="categoryFilter">Filter by Category:</label>
+                <select id="categoryFilter">
+                    <option value="">All Categories</option>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Documents">Documents</option>
+                    <option value="Accessories">Accessories</option>
+                    <option value="Books">Books</option>
+                    <option value="Keys">Keys</option>
+                    <option value="Clothing">Clothing</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="searchFilter">Search:</label>
+                <input type="text" id="searchFilter" placeholder="Search by title or location...">
+            </div>
+
+            <button onclick="applyFilters()" class="btn btn-secondary">Apply Filters</button>
+        </div>
+    </section>
+
+    <!-- Items Display -->
+    <section class="items-section">
+        <div class="items-container">
+            <div class="items-grid" id="itemsContainer">
+                <p class="loading">Loading items...</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Campus Lost & Found Portal. All rights reserved.</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/items.js"></script>
+    <script>
+        function getShortId(id) {
+            if (!id) return '';
+            return id.toString().slice(0, 8);
+        }
+
+        function escapeJsString(str) {
+            if (!str) return '';
+            return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
+        function copyToClipboard(text) {
+            if (!text) return;
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    alert('Copied to clipboard: ' + text);
+                })
+                .catch(err => {
+                    console.error('Copy failed:', err);
+                });
+        }
+
+        // Load found items on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            await checkAuthentication();
+            await loadItems('found');
+        });
+
+        // Load items function
+        async function loadItems(type) {
+            try {
+                const category = document.getElementById('categoryFilter').value;
+                let url = `http://localhost:5000/api/items?type=${type}&limit=50`;
+                
+                if (category) {
+                    url += `&category=${category}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const container = document.getElementById('itemsContainer');
+                container.innerHTML = '';
+
+                if (data.success && data.items.length > 0) {
+                    data.items.forEach(item => {
+                        const itemCard = createDetailedItemCard(item);
+                        container.appendChild(itemCard);
+                    });
+                } else {
+                    container.innerHTML = '<p class="no-items">No found items yet. Check back later!</p>';
+                }
+            } catch (error) {
+                console.error('Error loading items:', error);
+                document.getElementById('itemsContainer').innerHTML = '<p class="error">Error loading items. Please try again later.</p>';
+            }
+        }
+
+        // Create detailed item card
+        function createDetailedItemCard(item) {
+            const card = document.createElement('div');
+            card.className = 'item-card-detailed';
+            card.innerHTML = `
+                <div class="item-header">
+                    <div class="item-type ${item.type}">${item.type.toUpperCase()}</div>
+                    <span class="item-category">${item.category}</span>
+                </div>
+                <img src="${item.imageUrl || 'https://via.placeholder.com/300'}" alt="${item.title}" class="item-image-large">
+                <div class="item-details">
+                    <div class="item-meta">
+                        <span class="item-id"><strong>ID:</strong> ${getShortId(item._id)}</span>
+                        <button onclick="copyToClipboard('${item._id}')" class="btn btn-tiny">Copy</button>
+                    </div>
+                    <h3>${item.title}</h3>
+                    <p class="item-description">${item.description}</p>
+                    
+                    <div class="item-info">
+                        <div class="info-row">
+                            <span class="label">📍 Location:</span>
+                            <span class="value">${item.location}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">📅 Date:</span>
+                            <span class="value">${new Date(item.dateTime).toLocaleDateString()}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">👤 Found by:</span>
+                            <span class="value">${item.userId.fullName} (@${item.userId.username})</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">📧 Email:</span>
+                            <span class="value">${item.userId.email ? `<a href="mailto:${item.userId.email}">${item.userId.email}</a>` : 'Not provided'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">📞 Contact Number:</span>
+                            <span class="value">${item.contactPhone || item.userId.phone || 'Not provided'}</span>
+                        </div>
+                        ${item.relatedItemId ? `
+                        <div class="info-row">
+                            <span class="label">🔗 Matches Lost ID:</span>
+                            <span class="value">${getShortId(item.relatedItemId)}</span>
+                        </div>
+                        ` : ''}
+                        <div class="info-row">
+                            <span class="label">📝 Posted:</span>
+                            <span class="value">${new Date(item.createdAt).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+
+                    <div class="item-actions">
+                        <button onclick="contactPoster('${escapeJsString(item.userId.email || '')}', '${escapeJsString(item.contactPhone || item.userId.phone || '')}', '${escapeJsString(item.userId.fullName)}', '${escapeJsString(item.title)}')" class="btn btn-small btn-primary">
+                            Contact Finder
+                        </button>
+                        ${item.relatedItemId ? `<button onclick="removeMatchedItem('${item._id}')" class="btn btn-small btn-warning" style="margin-left: 8px;">Remove Matched Pair</button>` : ''}
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        // Apply filters
+        function applyFilters() {
+            loadItems('found');
+        }
+
+        // Filter items on category change
+        document.getElementById('categoryFilter').addEventListener('change', () => {
+            loadItems('found');
+        });
+
+        // Search functionality
+        document.getElementById('searchFilter').addEventListener('input', () => {
+            const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
+            const items = document.querySelectorAll('.item-card-detailed');
+            
+            items.forEach(item => {
+                const title = item.querySelector('h3').textContent.toLowerCase();
+                const location = item.querySelector('.info-row').textContent.toLowerCase();
+                
+                if (title.includes(searchTerm) || location.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

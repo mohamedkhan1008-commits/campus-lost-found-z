@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Lost & Found - Home</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-logo">
+                🔍 Campus Lost & Found
+            </div>
+            <ul class="navbar-menu" id="navbarMenu">
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="view-lost.html">Lost Items</a></li>
+                <li><a href="view-found.html">Found Items</a></li>
+                <li><a href="contact.html">Contact</a></li>
+                <li id="authLinks">
+                    <a href="login.html" class="btn-login">Login</a>
+                    <a href="signup.html" class="btn-signup">Sign Up</a>
+                </li>
+                <li id="userLinks" style="display:none;">
+                    <a href="dashboard.html" class="btn-dashboard">Dashboard</a>
+                    <button onclick="logoutUser()" class="btn-logout">Logout</button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Campus Lost & Found Portal</h1>
+            <p>Help your fellow students find their lost belongings</p>
+            <div class="hero-buttons">
+                <a href="report-lost.html" class="btn btn-primary">Report Lost Item</a>
+                <a href="report-found.html" class="btn btn-secondary">Report Found Item</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3 id="totalItems">0</h3>
+                <p>Total Items</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="lostCount">0</h3>
+                <p>Lost Items</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="foundCount">0</h3>
+                <p>Found Items</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="userCount">0</h3>
+                <p>Active Users</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Items Section -->
+    <section class="recent-items">
+        <h2>Recently Posted Items</h2>
+        <div class="items-grid" id="recentItems">
+            <p class="loading">Loading items...</p>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <h2>How It Works</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📝</div>
+                <h3>Report Item</h3>
+                <p>Post details about your lost or found item with photos and description</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <h3>Search & Browse</h3>
+                <p>Browse lost and found items posted by other students</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💬</div>
+                <h3>Connect</h3>
+                <p>Contact item posters directly through the platform</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">✅</div>
+                <h3>Get Resolved</h3>
+                <p>Mark items as resolved when they're found or returned</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Campus Lost & Found Portal. All rights reserved.</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Load statistics and recent items when page loads
+        window.addEventListener('DOMContentLoaded', async () => {
+            await checkAuthentication();
+            await loadHomePageStats();
+            await loadRecentItems();
+        });
+
+        // Fetch and display statistics
+        async function loadHomePageStats() {
+            try {
+                const response = await fetch('http://localhost:5000/api/items?limit=100');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const items = data.items;
+                    
+                    // Update stat cards
+                    document.getElementById('totalItems').textContent = data.pagination.total;
+                    document.getElementById('lostCount').textContent = items.filter(i => i.type === 'lost').length;
+                    document.getElementById('foundCount').textContent = items.filter(i => i.type === 'found').length;
+                    
+                    // Get user count
+                    const allItems = await fetch('http://localhost:5000/api/items?limit=1000');
+                    const allData = await allItems.json();
+                    const uniqueUsers = new Set(allData.items.map(i => {
+                        if (!i || !i.userId) return null;
+                        if (typeof i.userId === 'object') {
+                            return i.userId._id || i.userId.id || i.userId;
+                        }
+                        return i.userId;
+                    }).filter(Boolean)).size;
+                    document.getElementById('userCount').textContent = uniqueUsers;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Fetch and display recent items
+        async function loadRecentItems() {
+            try {
+                const response = await fetch('http://localhost:5000/api/items?limit=6');
+                const data = await response.json();
+                
+                const container = document.getElementById('recentItems');
+                container.innerHTML = '';
+
+                if (data.success && data.items.length > 0) {
+                    data.items.forEach(item => {
+                        const itemCard = createItemCard(item);
+                        container.appendChild(itemCard);
+                    });
+                } else {
+                    container.innerHTML = '<p class="no-items">No items found yet. Be the first to post!</p>';
+                }
+            } catch (error) {
+                console.error('Error loading items:', error);
+                document.getElementById('recentItems').innerHTML = '<p class="error">Error loading items. Please try again later.</p>';
+            }
+        }
+
+        // Helper function to create item card
+        function createItemCard(item) {
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            card.innerHTML = `
+                <div class="item-type ${item.type}">${item.type.toUpperCase()}</div>
+                <img src="${item.imageUrl || 'https://via.placeholder.com/200'}" alt="${item.title}" class="item-image">
+                <div class="item-content">
+                    <h3>${item.title}</h3>
+                    <p class="category"><strong>Category:</strong> ${item.category}</p>
+                    <p class="location"><strong>Location:</strong> ${item.location}</p>
+                    <p class="posted-by"><strong>Posted by:</strong> ${item.userId?.username || item.userId?.fullName || item.userId || 'Unknown'}</p>
+                    <small class="date">Posted: ${new Date(item.createdAt).toLocaleDateString()}</small>
+                    <a href="view-lost.html" class="btn btn-small">View Details</a>
+                </div>
+            `;
+            return card;
+        }
+    </script>
+</body>
+</html>

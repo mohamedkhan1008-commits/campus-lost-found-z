@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Lost Item - Campus Lost & Found</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-logo">
+                🔍 Campus Lost & Found
+            </div>
+            <ul class="navbar-menu" id="navbarMenu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="view-lost.html">Lost Items</a></li>
+                <li><a href="view-found.html">Found Items</a></li>
+                <li id="authLinks">
+                    <a href="login.html" class="btn-login">Login</a>
+                </li>
+                <li id="userLinks" style="display:none;">
+                    <a href="dashboard.html" class="btn-dashboard">Dashboard</a>
+                    <button onclick="logoutUser()" class="btn-logout">Logout</button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Report Lost Item Form -->
+    <section class="form-section">
+        <div class="form-container">
+            <h2>Report a Lost Item</h2>
+            <p class="form-subtitle">Help others find your lost belongings. Provide as much detail as possible.</p>
+
+            <form id="reportLostForm" class="form">
+                <div class="form-group">
+                    <label for="title">Item Title *</label>
+                    <input type="text" id="title" name="title" required placeholder="e.g., Black Backpack">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="category">Category *</label>
+                        <select id="category" name="category" required>
+                            <option value="">Select Category</option>
+                            <option value="Electronics">Electronics</option>
+                            <option value="Documents">Documents</option>
+                            <option value="Accessories">Accessories</option>
+                            <option value="Books">Books</option>
+                            <option value="Keys">Keys</option>
+                            <option value="Clothing">Clothing</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dateTime">Date Lost *</label>
+                        <input type="datetime-local" id="dateTime" name="dateTime" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="location">Location Lost *</label>
+                    <input type="text" id="location" name="location" required placeholder="e.g., Library 3rd Floor, Science Block">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description *</label>
+                    <textarea id="description" name="description" required placeholder="Detailed description of the item, including color, brand, condition, identifying marks, etc."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="contactPhone">Contact Phone (optional)</label>
+                    <input type="tel" id="contactPhone" name="contactPhone" placeholder="e.g., +1 555 123 4567">
+                </div>
+
+                <div class="form-group">
+                    <label for="imageUrl">Image URL (Optional)</label>
+                    <input type="url" id="imageUrl" name="imageUrl" placeholder="https://example.com/image.jpg">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Post Lost Item</button>
+            </form>
+
+            <!-- Success/Error Messages -->
+            <div id="reportMessage" class="message" style="display:none;"></div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Campus Lost & Found Portal. All rights reserved.</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Check authentication on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            const isAuthenticated = await checkAuthentication();
+            if (!isAuthenticated) {
+                window.location.href = 'login.html';
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('reportLostForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const title = document.getElementById('title').value.trim();
+            const category = document.getElementById('category').value;
+            const dateTime = document.getElementById('dateTime').value;
+            const location = document.getElementById('location').value.trim();
+            const description = document.getElementById('description').value.trim();
+            const contactPhone = document.getElementById('contactPhone').value.trim();
+            const imageUrl = document.getElementById('imageUrl').value.trim();
+
+            if (!title || !category || !dateTime || !location || !description) {
+                showMessage('Please fill in all required fields', 'error');
+                return;
+            }
+
+            // Validate optional contact phone format
+            if (contactPhone) {
+                const phoneRegex = /^\+?[0-9\s\-()]{7,20}$/;
+                if (!phoneRegex.test(contactPhone)) {
+                    showMessage('Please enter a valid contact phone number', 'error');
+                    return;
+                }
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('http://localhost:5000/api/items', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        title,
+                        category,
+                        type: 'lost',
+                        dateTime: new Date(dateTime).toISOString(),
+                        location,
+                        description,
+                        contactPhone: contactPhone || null,
+                        imageUrl: imageUrl || null,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('Item posted successfully! Redirecting to dashboard...', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                } else {
+                    showMessage(data.message || 'Error posting item', 'error');
+                }
+            } catch (error) {
+                console.error('Error posting item:', error);
+                showMessage('Error posting item. Please try again.', 'error');
+            }
+        });
+
+        // Show message function
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('reportMessage');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

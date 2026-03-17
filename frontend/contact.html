@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact & Help - Campus Lost & Found</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-logo">
+                🔍 Campus Lost & Found
+            </div>
+            <ul class="navbar-menu" id="navbarMenu">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="view-lost.html">Lost Items</a></li>
+                <li><a href="view-found.html">Found Items</a></li>
+                <li><a href="contact.html" class="active">Contact</a></li>
+                <li id="authLinks">
+                    <a href="login.html" class="btn-login">Login</a>
+                </li>
+                <li id="userLinks" style="display:none;">
+                    <a href="dashboard.html" class="btn-dashboard">Dashboard</a>
+                    <button onclick="logoutUser()" class="btn-logout">Logout</button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <h1>Contact & Help</h1>
+        <p>We're here to help. Get in touch with us.</p>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact-section">
+        <div class="contact-container">
+            <div class="contact-info">
+                <h2>Get in Touch</h2>
+                <div class="info-cards">
+                    <div class="info-card">
+                        <h3>📧 Email</h3>
+                        <p><a href="mailto:support@campuslostfound.com">support@campuslostfound.com</a></p>
+                    </div>
+                    <div class="info-card">
+                        <h3>📱 Phone</h3>
+                        <p><a href="tel:+1234567890">+1 (234) 567-8900</a></p>
+                    </div>
+                    <div class="info-card">
+                        <h3>🏫 Physical Location</h3>
+                        <p>Campus Lost & Found Office<br>Main Campus Building, Room 101<br>University Address</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>⏰ Office Hours</h3>
+                        <p>Monday - Friday: 9:00 AM - 5:00 PM<br>Saturday - Sunday: Closed</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-form-wrapper">
+                <h2>Send us a Message</h2>
+                <form id="contactForm" class="form">
+                    <div class="form-group">
+                        <label for="contactName">Your Name</label>
+                        <input type="text" id="contactName" name="name" required placeholder="Your name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contactEmail">Your Email</label>
+                        <input type="email" id="contactEmail" name="email" required placeholder="your@email.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contactSubject">Subject</label>
+                        <input type="text" id="contactSubject" name="subject" required placeholder="Subject of your message">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contactMessage">Message</label>
+                        <textarea id="contactMessage" name="message" required rows="5" placeholder="Your message..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Send Message</button>
+                </form>
+                <div id="contactMessage" class="message" style="display:none;"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+        <div class="faq-container">
+            <div class="faq-item">
+                <h3>How do I report a lost item?</h3>
+                <p>First, sign up for an account if you haven't already. Then, go to "Report Lost Item" and fill in the details about your lost item including title, category, location, and description. You can also add an image for better identification.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>How do I report a found item?</h3>
+                <p>Sign up for an account, then click "Report Found Item". Fill in the details about the item you found. The owner can then contact you through the platform email.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Can I delete my posted item?</h3>
+                <p>Yes! Once you log in to your dashboard, you can delete any item you've posted. You can also mark items as "resolved" when they're found or returned.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>How do I contact someone about their item?</h3>
+                <p>On each item listing, you'll find a "Contact Poster" button with their email address. You can email them directly to inquire about the item or if you found their lost item.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Is my personal information safe?</h3>
+                <p>Yes, your information is kept private and secure. Your email is only visible to other users when they try to contact you about your posted items.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>How long are items displayed?</h3>
+                <p>Items remain active on the platform indefinitely until you manually delete them or mark them as resolved. We recommend updating your items periodically.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>What if I found the owner of an item I found?</h3>
+                <p>Contact the person who posted the found item directly using the email link provided. Arrange a meeting on campus to return the item.</p>
+            </div>
+
+            <div class="faq-item">
+                <h3>Is this service free?</h3>
+                <p>Yes! Campus Lost & Found is completely free to use. It's a community service to help students recover their lost belongings.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Campus Lost & Found Portal. All rights reserved.</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Load authentication status
+        window.addEventListener('DOMContentLoaded', async () => {
+            await checkAuthentication();
+        });
+
+        // Handle contact form submission
+        document.getElementById('contactForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('contactName').value.trim();
+            const email = document.getElementById('contactEmail').value.trim();
+            const subject = document.getElementById('contactSubject').value.trim();
+            const message = document.getElementById('contactMessage').value.trim();
+
+            // For this demo, we'll just show a success message
+            // In a real application, this would send to a backend service
+            showContactMessage('Thank you for your message! We will get back to you soon.', 'success');
+
+            // Reset form
+            document.getElementById('contactForm').reset();
+        });
+
+        // Show contact message
+        function showContactMessage(text, type) {
+            const messageDiv = document.getElementById('contactMessage');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+
+            // Hide message after 5 seconds
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
