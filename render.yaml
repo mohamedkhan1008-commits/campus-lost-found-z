@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: campus-lost-found-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_TYPE
+        value: sqlite
+      - key: SQLITE_FILE
+        value: /opt/render/project/data/campus_lost_found.sqlite
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000
