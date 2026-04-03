@@ -56,8 +56,31 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="dateTime">Date Lost *</label>
-                        <input type="datetime-local" id="dateTime" name="dateTime" required>
+                        <label>Date Lost *</label>
+                        <div class="row">
+                            <input type="date" id="dateDate" class="input-small" required>
+                            <select id="dateHour" class="input-small" required>
+                                <option value="">HH</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                            </select>
+                            <input type="number" id="dateMinute" class="input-small" required min="0" max="59" step="1" placeholder="MM">
+                            <select id="dateAmPm" class="input-small" required>
+                                <option value="AM">AM</option>
+                                <option value="PM">PM</option>
+                            </select>
+                        </div>
+                        <p id="dateTimeDisplay" class="note">Selected time: --</p>
                     </div>
                 </div>
 
@@ -96,6 +119,7 @@
 
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/feedback.js"></script>
     <script>
         // Check authentication on page load
         window.addEventListener('DOMContentLoaded', async () => {
@@ -105,20 +129,60 @@
             }
         });
 
+        // Update time preview display in 12-hour format
+        const dateInputs = ['dateDate', 'dateHour', 'dateMinute', 'dateAmPm'];
+        dateInputs.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', () => {
+                    const date = document.getElementById('dateDate').value;
+                    const hour = document.getElementById('dateHour').value;
+                    const minute = document.getElementById('dateMinute').value;
+                    const ampm = document.getElementById('dateAmPm').value;
+
+                    const display = document.getElementById('dateTimeDisplay');
+                    if (!date || !hour || !minute || !ampm) {
+                        display.textContent = 'Selected time: --';
+                        return;
+                    }
+
+                    const hourNum = parseInt(hour, 10);
+                    const minuteNum = parseInt(minute, 10);
+                    let hourFormatted = hourNum;
+                    if (hourFormatted === 0) hourFormatted = 12;
+                    display.textContent = `Selected time: ${new Date(`${date}T${String((ampm === 'PM' ? (hourNum % 12) + 12 : hourNum % 12)).padStart(2,'0')}:${String(minuteNum).padStart(2,'0')}:00`).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}`;
+                });
+            }
+        });
+
         // Handle form submission
         document.getElementById('reportLostForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const title = document.getElementById('title').value.trim();
             const category = document.getElementById('category').value;
-            const dateTime = document.getElementById('dateTime').value;
+            const dateDate = document.getElementById('dateDate').value;
+            const dateHour = document.getElementById('dateHour').value;
+            const dateMinute = document.getElementById('dateMinute').value;
+            const dateAmPm = document.getElementById('dateAmPm').value;
             const location = document.getElementById('location').value.trim();
             const description = document.getElementById('description').value.trim();
             const contactPhone = document.getElementById('contactPhone').value.trim();
             const imageUrl = document.getElementById('imageUrl').value.trim();
 
+            let dateTime;
+            if (dateDate && dateHour && dateMinute && dateAmPm) {
+                const hour12 = parseInt(dateHour, 10);
+                let hour24 = hour12 % 12;
+                if (dateAmPm === 'PM') hour24 += 12;
+                const formattedDate = `${dateDate}T${String(hour24).padStart(2, '0')}:${String(dateMinute).padStart(2, '0')}:00`;
+                dateTime = new Date(formattedDate).toISOString();
+            } else {
+                dateTime = '';
+            }
+
             if (!title || !category || !dateTime || !location || !description) {
-                showMessage('Please fill in all required fields', 'error');
+                Toast.error('Please fill in all required fields');
                 return;
             }
 
@@ -126,12 +190,15 @@
             if (contactPhone) {
                 const phoneRegex = /^\+?[0-9\s\-()]{7,20}$/;
                 if (!phoneRegex.test(contactPhone)) {
-                    showMessage('Please enter a valid contact phone number', 'error');
+                    Toast.error('Please enter a valid contact phone number');
                     return;
                 }
             }
 
             try {
+                const submitBtn = document.querySelector('button[type="submit"]');
+                LoadingState.show(submitBtn);
+                
                 const token = localStorage.getItem('token');
                 const response = await fetch('http://localhost:5000/api/items', {
                     method: 'POST',
@@ -154,27 +221,46 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showMessage('Item posted successfully! Redirecting to dashboard...', 'success');
+                    Toast.success('Item posted successfully! Redirecting...');
                     
                     setTimeout(() => {
                         window.location.href = 'dashboard.html';
-                    }, 2000);
+                    }, 1500);
                 } else {
-                    showMessage(data.message || 'Error posting item', 'error');
+                    Toast.error(data.message || 'Error posting item');
+                    LoadingState.hide(submitBtn);
                 }
             } catch (error) {
                 console.error('Error posting item:', error);
-                showMessage('Error posting item. Please try again.', 'error');
+                Toast.error('Error posting item. Please try again.');
+                LoadingState.hide(document.querySelector('button[type="submit"]'));
             }
         });
 
-        // Show message function
+        // Show message function (legacy, kept for compatibility)
         function showMessage(text, type) {
-            const messageDiv = document.getElementById('reportMessage');
-            messageDiv.textContent = text;
-            messageDiv.className = `message ${type}`;
-            messageDiv.style.display = 'block';
+            if (type === 'success') {
+                Toast.success(text);
+            } else {
+                Toast.error(text);
+            }
         }
+
+        // Update displayed 12-hour time text when value changes
+        document.getElementById('dateTime').addEventListener('change', (e) => {
+            const display = document.getElementById('dateTimeDisplay');
+            const value = e.target.value;
+            if (!value) {
+                display.textContent = 'Selected time: --';
+                return;
+            }
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) {
+                display.textContent = 'Selected time: invalid';
+                return;
+            }
+            display.textContent = `Selected time: ${parsed.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}`;
+        });
     </script>
 </body>
 </html>

@@ -210,7 +210,7 @@
                 <p><strong>Name:</strong> ${user.fullName}</p>
                 <p><strong>Username:</strong> @${user.username}</p>
                 <p><strong>Email:</strong> ${user.email}</p>
-                <p><strong>Member Since:</strong> ${new Date(user.createdAt).toLocaleDateString()}</p>
+                <p><strong>Member Since:</strong> ${new Date(user.createdAt).toLocaleString(undefined, { year:'numeric', month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true})}</p>
             `;
         }
 
@@ -230,7 +230,7 @@
                             <h3>${item.title}</h3>
                             <p class="category">${item.category}</p>
                             <p class="status"><strong>Status:</strong> ${item.status}</p>
-                            <p class="posted">Posted: ${new Date(item.createdAt).toLocaleDateString()}</p>
+                            <p class="posted">Posted: ${new Date(item.createdAt).toLocaleString(undefined, { year:'numeric', month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true})}</p>
                             <div class="item-actions-dashboard">
                                 <button onclick="markAsResolved('${item._id}')" class="btn btn-small btn-success">Mark Resolved</button>
                                 <button onclick="deleteItem('${item._id}')" class="btn btn-small btn-danger">Delete</button>

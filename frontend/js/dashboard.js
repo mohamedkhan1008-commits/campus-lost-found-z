@@ -94,5 +94,14 @@ function formatDate(dateString) {
  * @returns {string} - Formatted date and time
  */
 function formatDateTime(dateString) {
-  return new Date(dateString).toLocaleString();
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 }

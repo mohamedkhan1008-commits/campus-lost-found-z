@@ -92,17 +92,7 @@ router.get('/', optionalVerifyToken, async (req, res) => {
       sort: 'createdAt DESC',
     });
 
-    // Remove contact details for unauthenticated users
-    if (!req.userId) {
-      items.forEach(item => {
-        if (item.user) {
-          item.user.email = undefined;
-          item.user.phone = undefined;
-        }
-        // also remove any custom contact phone on item itself
-        item.contactPhone = undefined;
-      });
-    }
+    // Contact details are shown for everyone so people can contact posters to retrieve items
 
     // Get total count for pagination
     const total = await Item.countDocuments(filter);
@@ -134,14 +124,7 @@ router.get('/:id', optionalVerifyToken, async (req, res) => {
   try {
     const item = await Item.findById(req.params.id);
 
-    // Remove contact details for unauthenticated users
-    if (item && !req.userId) {
-      if (item.user) {
-        item.user.email = undefined;
-        item.user.phone = undefined;
-      }
-      item.contactPhone = undefined;
-    }
+    // Contact details are shown for everyone so people can contact posters to retrieve items
 
     if (!item) {
       return res.status(404).json({ 

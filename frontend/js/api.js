@@ -36,6 +36,9 @@ async function apiGet(endpoint, requiresAuth = false) {
     return await response.json();
   } catch (error) {
     console.error('API GET Error:', error);
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to backend server at http://localhost:5000. Is backend running?');
+    }
     throw error;
   }
 }
@@ -75,6 +78,9 @@ async function apiPost(endpoint, data = {}, requiresAuth = false) {
     return await response.json();
   } catch (error) {
     console.error('API POST Error:', error);
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to backend server at http://localhost:5000. Is backend running?');
+    }
     throw error;
   }
 }
@@ -114,6 +120,9 @@ async function apiPut(endpoint, data = {}, requiresAuth = false) {
     return await response.json();
   } catch (error) {
     console.error('API PUT Error:', error);
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to backend server at http://localhost:5000. Is backend running?');
+    }
     throw error;
   }
 }
@@ -151,6 +160,9 @@ async function apiDelete(endpoint, requiresAuth = false) {
     return await response.json();
   } catch (error) {
     console.error('API DELETE Error:', error);
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to backend server at http://localhost:5000. Is backend running?');
+    }
     throw error;
   }
 }

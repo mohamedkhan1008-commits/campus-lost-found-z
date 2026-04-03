@@ -5,6 +5,7 @@
 require('dotenv').config(); // Load environment variables
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const { connectDB } = require('./config/db');
 
 // Import routes
@@ -32,9 +33,11 @@ app.use(express.urlencoded({ extended: true }));
 // DATABASE CONNECTION
 // ============================================
 
-// Connect to SQLite database
+// Connect to MySQL database
 connectDB().catch(err => {
   console.error('Database initialization failed', err);
+  console.error('🚨 Ensure MySQL is running and your .env has correct DB_HOST, DB_USER, DB_PASSWORD, DB_NAME.');
+  console.error('🚨 For quick local testing, run: mysql -u root -p (or start your MySQL service).');
   process.exit(1);
 });
 
@@ -60,8 +63,16 @@ app.use('/api/items', itemRoutes);
 app.use('/api/users', userRoutes);
 
 // ============================================
-// ERROR HANDLING
+// STATIC FILE SERVING
 // ============================================
+
+// Serve static files from the frontend directory
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
+
+// Catch-all handler: send back index.html for any non-API routes (for SPA routing)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
+});
 
 // 404 - Not Found handler
 app.use((req, res) => {

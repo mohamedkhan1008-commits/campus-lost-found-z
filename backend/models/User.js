@@ -1,10 +1,10 @@
-// User Model (SQLite version)
+// User Model (MySQL version)
 // Provides helper functions for interacting with the users table.
 
 const { getDb } = require('../config/db');
 const bcrypt = require('bcryptjs');
 
-// Convert sqlite3 row to user object with toJSON method
+// Convert MySQL row to user object with toJSON method
 function buildUser(row) {
   if (!row) return null;
   const user = {
@@ -32,15 +32,15 @@ const User = {
   async create({ username, email, phone, password, fullName }) {
     const db = getDb();
     const hashed = await bcrypt.hash(password, 10);
-    return new Promise((resolve, reject) => {
-      const stmt = db.prepare(
-        `INSERT INTO users (username, email, phone, password, fullName) VALUES (?, ?, ?, ?, ?)`
+    try {
+      const [result] = await db.execute(
+        'INSERT INTO users (username, email, phone, password, fullName) VALUES (?, ?, ?, ?, ?)',
+        [username, email, phone || null, hashed, fullName]
       );
-      stmt.run(username, email, phone || null, hashed, fullName, function (err) {
-        if (err) return reject(err);
-        User.findById(this.lastID).then(resolve).catch(reject);
-      });
-    });
+      return await User.findById(result.insertId);
+    } catch (err) {
+      throw err;
+    }
   },
 
   async findOne(filter) {
@@ -62,12 +62,12 @@ const User = {
     }
     if (parts.length === 0) return null;
     query += parts.join(' OR ');
-    return new Promise((resolve, reject) => {
-      db.get(query, params, (err, row) => {
-        if (err) return reject(err);
-        resolve(buildUser(row));
-      });
-    });
+    try {
+      const [rows] = await db.execute(query, params);
+      return buildUser(rows[0]);
+    } catch (err) {
+      throw err;
+    }
   },
 
   async findById(id) {
@@ -82,12 +82,12 @@ const User = {
       query += ' WHERE email = ?';
       params.push(filter.email);
     }
-    return new Promise((resolve, reject) => {
-      db.get(query, params, (err, row) => {
-        if (err) return reject(err);
-        resolve(row.count);
-      });
-    });
+    try {
+      const [rows] = await db.execute(query, params);
+      return rows[0].count;
+    } catch (err) {
+      throw err;
+    }
   },
 
   async update(id, updates) {
@@ -105,12 +105,12 @@ const User = {
     if (fields.length === 0) return User.findById(id);
     params.push(id);
     const query = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
-    return new Promise((resolve, reject) => {
-      db.run(query, params, function (err) {
-        if (err) return reject(err);
-        User.findById(id).then(resolve).catch(reject);
-      });
-    });
+    try {
+      await db.execute(query, params);
+      return await User.findById(id);
+    } catch (err) {
+      throw err;
+    }
   },
 };
 

@@ -180,7 +180,7 @@
                     <p class="category"><strong>Category:</strong> ${item.category}</p>
                     <p class="location"><strong>Location:</strong> ${item.location}</p>
                     <p class="posted-by"><strong>Posted by:</strong> ${item.userId?.username || item.userId?.fullName || item.userId || 'Unknown'}</p>
-                    <small class="date">Posted: ${new Date(item.createdAt).toLocaleDateString()}</small>
+                    <small class="date">Posted: ${new Date(item.createdAt).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute:'2-digit', hour12: true })}</small>
                     <a href="view-lost.html" class="btn btn-small">View Details</a>
                 </div>
             `;

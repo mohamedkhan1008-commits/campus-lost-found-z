@@ -134,7 +134,14 @@ function createItemCard(item) {
   
   const itemType = item.type.toUpperCase();
   const itemImage = item.imageUrl || 'https://via.placeholder.com/200';
-  const postedDate = new Date(item.createdAt).toLocaleDateString();
+  const postedDate = new Date(item.createdAt).toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 
   const posterEmail = item.userId.email || '';
   const posterPhone = item.contactPhone || item.userId.phone || '';

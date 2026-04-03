@@ -1,4 +1,4 @@
-// Item Model (SQLite version)
+// Item Model (MySQL version)
 // Provides helper functions for interacting with the items table.
 
 const { getDb } = require('../config/db');
@@ -54,12 +54,11 @@ const Item = {
       userId,
       relatedItemId,
     } = data;
-    return new Promise((resolve, reject) => {
-      const stmt = db.prepare(`
+    try {
+      const [result] = await db.execute(`
         INSERT INTO items (title, category, type, description, location, dateTime, contactPhone, imageUrl, userId, relatedItemId)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      stmt.run(
+      `, [
         title,
         category,
         type,
@@ -69,13 +68,12 @@ const Item = {
         contactPhone || null,
         imageUrl || null,
         userId,
-        relatedItemId || null,
-        function (err) {
-          if (err) return reject(err);
-          Item.findById(this.lastID).then(resolve).catch(reject);
-        }
-      );
-    });
+        relatedItemId || null
+      ]);
+      return await Item.findById(result.insertId);
+    } catch (err) {
+      throw err;
+    }
   },
 
   async find(filter = {}, options = {}) {
@@ -121,37 +119,9 @@ const Item = {
     if (options.offset) {
       query += ' OFFSET ' + options.offset;
     }
-    return new Promise((resolve, reject) => {
-      db.all(query, params, (err, rows) => {
-        if (err) return reject(err);
-        const items = rows.map(row => {
-          const item = buildItem(row);
-          item.user = {
-            id: row.userId,
-            username: row.user_username,
-            email: row.user_email,
-            fullName: row.user_fullName,
-            phone: row.user_phone,
-          };
-          return item;
-        });
-        resolve(items);
-      });
-    });
-  },
-
-  async findById(id) {
-    const db = getDb();
-    return new Promise((resolve, reject) => {
-      db.get(`
-        SELECT items.*, users.username as user_username, users.email as user_email,
-               users.fullName as user_fullName, users.phone as user_phone
-        FROM items
-        JOIN users ON items.userId = users.id
-        WHERE items.id = ?
-      `, [id], (err, row) => {
-        if (err) return reject(err);
-        if (!row) return resolve(null);
+    try {
+      const [rows] = await db.execute(query, params);
+      const items = rows.map(row => {
         const item = buildItem(row);
         item.user = {
           id: row.userId,
@@ -160,9 +130,38 @@ const Item = {
           fullName: row.user_fullName,
           phone: row.user_phone,
         };
-        resolve(item);
+        return item;
       });
-    });
+      return items;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  async findById(id) {
+    const db = getDb();
+    try {
+      const [rows] = await db.execute(`
+        SELECT items.*, users.username as user_username, users.email as user_email,
+               users.fullName as user_fullName, users.phone as user_phone
+        FROM items
+        JOIN users ON items.userId = users.id
+        WHERE items.id = ?
+      `, [id]);
+      if (rows.length === 0) return null;
+      const row = rows[0];
+      const item = buildItem(row);
+      item.user = {
+        id: row.userId,
+        username: row.user_username,
+        email: row.user_email,
+        fullName: row.user_fullName,
+        phone: row.user_phone,
+      };
+      return item;
+    } catch (err) {
+      throw err;
+    }
   },
 
   async countDocuments(filter = {}) {
@@ -185,36 +184,35 @@ const Item = {
     if (clauses.length) {
       query += ' WHERE ' + clauses.join(' AND ');
     }
-    return new Promise((resolve, reject) => {
-      db.get(query, params, (err, row) => {
-        if (err) return reject(err);
-        resolve(row.count);
-      });
-    });
+    try {
+      const [rows] = await db.execute(query, params);
+      return rows[0].count;
+    } catch (err) {
+      throw err;
+    }
   },
 
   async deleteById(id) {
     const db = getDb();
-    return new Promise((resolve, reject) => {
-      db.run('DELETE FROM items WHERE id = ?', [id], function (err) {
-        if (err) return reject(err);
-        resolve(this.changes);
-      });
-    });
+    try {
+      const [result] = await db.execute('DELETE FROM items WHERE id = ?', [id]);
+      return result.affectedRows;
+    } catch (err) {
+      throw err;
+    }
   },
 
   async updateStatus(id, status) {
     const db = getDb();
-    return new Promise((resolve, reject) => {
-      db.run(
+    try {
+      await db.execute(
         'UPDATE items SET status = ? WHERE id = ?',
-        [status, id],
-        function (err) {
-          if (err) return reject(err);
-          Item.findById(id).then(resolve).catch(reject);
-        }
+        [status, id]
       );
-    });
+      return await Item.findById(id);
+    } catch (err) {
+      throw err;
+    }
   },
 };
 

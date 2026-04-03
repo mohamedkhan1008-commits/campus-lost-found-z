@@ -339,6 +339,49 @@ The application is fully responsive and tested on:
    - Responsive CSS with mobile-first approach
    - Progressive enhancement
 
+## 💡 Best Working Options (Final Setup)
+
+### Recommended Local Setup
+- Backend: Node + Express running on `localhost:5000`
+  - `cd backend`
+  - `npm install`
+  - `npm run dev`
+- Frontend: static server running on `localhost:8000`
+  - `cd frontend`
+  - `python -m http.server 8000`
+- Health check:
+  - `http://localhost:5000/api/health`
+
+### Database Options (quick switching)
+- **SQLite (development fallback)**
+  - Set `DB_TYPE=sqlite` in `backend/.env`
+  - `SQLITE_FILE=data/campus_lost_found.sqlite`
+- **MySQL (production)**
+  - Set `DB_TYPE=mysql`, configure `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+  - Ensure MySQL is running
+
+### Time Input Options
+- 12-hour picker: `dateHour` (1-12), `dateMinute` (0-59), `dateAmPm` (AM/PM)
+- Displays selected time in AM/PM format and stores ISO timestamp for backend
+
+### Triggers (if needed)
+- `npm run dev` auto-reloads with `nodemon`
+- Set `PORT` in `.env` to avoid conflicts
+- Use browser console and network tab to inspect requests and errors
+
+### Verify Flow
+1. Signup > Login
+2. Post Lost Item > Post Found Item
+3. View on dashboard + admin stats
+4. Confirm `12h` time formatting appears in UI
+
+### Production Deployment (outline)
+- Use process manager (PM2) for backend
+- Build CDN-hosted frontend or Netlify
+- Use (.env) secrets for JWT and DB
+- Set CORS to trusted domains only
+
+
 5. **Code Quality**
    - Inline comments explaining functionality
    - Consistent naming conventions

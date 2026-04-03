@@ -144,8 +144,8 @@
                 <div class="item-header">
                     <div class="item-type ${item.type}">${item.type.toUpperCase()}</div>
                     <span class="item-category">${item.category}</span>
+                    <img src="${item.imageUrl || 'https://via.placeholder.com/300'}" alt="${item.title}" class="item-image-large">
                 </div>
-                <img src="${item.imageUrl || 'https://via.placeholder.com/300'}" alt="${item.title}" class="item-image-large">
                 <div class="item-details">
                     <div class="item-meta">
                         <span class="item-id"><strong>ID:</strong> ${getShortId(item._id)}</span>
@@ -160,8 +160,8 @@
                             <span class="value">${item.location}</span>
                         </div>
                         <div class="info-row">
-                            <span class="label">📅 Date:</span>
-                            <span class="value">${new Date(item.dateTime).toLocaleDateString()}</span>
+                            <span class="label">📅 Date & Time:</span>
+                            <span class="value">${new Date(item.dateTime).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute:'2-digit', hour12: true })}</span>
                         </div>
                         <div class="info-row">
                             <span class="label">👤 Posted by:</span>

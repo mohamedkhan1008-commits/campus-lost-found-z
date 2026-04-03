@@ -1,90 +1,169 @@
 // Database Configuration
-// This file handles SQLite connection using sqlite3
+// This file handles both MySQL and SQLite connections
 
-const path = require('path');
+const mysql = require('mysql2/promise');
 const sqlite3 = require('sqlite3').verbose();
+const { open } = require('sqlite');
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config();
 
-// Path to SQLite database file (creates the file if it doesn't exist)
-const dbPath = process.env.SQLITE_DB_PATH || path.join(__dirname, '..', 'data', 'database.sqlite');
 let db;
+const dbType = (process.env.DB_TYPE || 'mysql').toLowerCase();
 
-// Function to connect to SQLite and initialize schema
 const connectDB = async () => {
-  return new Promise((resolve, reject) => {
-    // ensure data directory exists
-    const fs = require('fs');
-    const dir = path.dirname(dbPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error('✗ SQLite Connection Error:', err.message);
-        reject(err);
-        return;
+  if (dbType === 'sqlite') {
+    try {
+      const sqliteFile = process.env.SQLITE_FILE || path.join(__dirname, '..', 'data', 'campus_lost_found.sqlite');
+      const dbDir = path.dirname(sqliteFile);
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
       }
 
-      console.log('✓ SQLite Connected Successfully at', dbPath);
-      // initialize tables
-      db.serialize(() => {
-        db.run(`
-          CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            email TEXT NOT NULL UNIQUE,
-            phone TEXT,
-            password TEXT NOT NULL,
-            fullName TEXT NOT NULL,
-            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-
-        db.run(`
-          CREATE TABLE IF NOT EXISTS items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            category TEXT NOT NULL,
-            type TEXT NOT NULL,
-            description TEXT NOT NULL,
-            location TEXT NOT NULL,
-            dateTime DATETIME NOT NULL,
-            contactPhone TEXT,
-            imageUrl TEXT,
-            userId INTEGER NOT NULL,
-            relatedItemId INTEGER,
-            status TEXT NOT NULL DEFAULT 'active',
-            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(userId) REFERENCES users(id),
-            FOREIGN KEY(relatedItemId) REFERENCES items(id)
-          )
-        `);
-
-        // Ensure contactPhone column exists for existing databases
-        db.get("PRAGMA table_info(items)", (err, row) => {
-          if (err) {
-            console.error('Error checking items table schema:', err.message);
-          } else {
-            // PRAGMA table_info returns multiple rows; query separately
-            db.all("PRAGMA table_info(items)", (err2, columns) => {
-              if (!err2) {
-                const hasContact = columns.some(col => col.name === 'contactPhone');
-                if (!hasContact) {
-                  console.log('⚠️ Adding contactPhone column to items table');
-                  db.run('ALTER TABLE items ADD COLUMN contactPhone TEXT');
-                }
-              }
-            });
-          }
-        });
+      const sqliteDb = await open({
+        filename: sqliteFile,
+        driver: sqlite3.Database,
       });
 
-      resolve(db);
+      await sqliteDb.run('PRAGMA foreign_keys = ON;');
+
+      // Wrap sqlite interface as execute() compatible with mysql2 code
+      db = {
+        execute: async (sql, params = []) => {
+          const normalized = sql.trim().toUpperCase();
+          if (normalized.startsWith('SELECT')) {
+            const rows = await sqliteDb.all(sql, params);
+            return [rows];
+          }
+
+          const result = await sqliteDb.run(sql, params);
+          return [{ insertId: result.lastID, affectedRows: result.changes }];
+        },
+        getConnection: async () => ({ release: () => {} }),
+        close: async () => sqliteDb.close(),
+      };
+
+      console.log(`✓ SQLite connected at ${sqliteFile}`);
+      await initializeTables();
+      return db;
+    } catch (err) {
+      console.error('✗ SQLite Connection Error:', err.message);
+      throw err;
+    }
+  }
+
+  // Default to MySQL
+  try {
+    const tempConnection = await mysql.createConnection({
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
     });
-  });
+
+    const dbName = process.env.DB_NAME || 'campus_lost_found';
+    await tempConnection.execute(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
+    console.log(`✓ Database '${dbName}' ensured to exist`);
+
+    await tempConnection.end();
+
+    db = mysql.createPool({
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: dbName,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+    });
+
+    const connection = await db.getConnection();
+    console.log('✓ MySQL Connected Successfully');
+
+    await initializeTables();
+
+    connection.release();
+    return db;
+  } catch (err) {
+    console.error('✗ MySQL Connection Error:', err.message);
+    throw err;
+  }
 };
 
-// Export both connect and the db instance getter
+const initializeTables = async () => {
+  try {
+    if (dbType === 'sqlite') {
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT NOT NULL UNIQUE,
+          email TEXT NOT NULL UNIQUE,
+          phone TEXT,
+          password TEXT NOT NULL,
+          fullName TEXT NOT NULL,
+          createdAt TEXT DEFAULT (datetime('now'))
+        )
+      `);
+
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          category TEXT NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('lost', 'found')),
+          description TEXT NOT NULL,
+          location TEXT NOT NULL,
+          dateTime TEXT NOT NULL,
+          contactPhone TEXT,
+          imageUrl TEXT,
+          userId INTEGER NOT NULL,
+          relatedItemId INTEGER,
+          status TEXT NOT NULL DEFAULT 'active',
+          createdAt TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (relatedItemId) REFERENCES items(id) ON DELETE SET NULL
+        )
+      `);
+    } else {
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          username VARCHAR(255) NOT NULL UNIQUE,
+          email VARCHAR(255) NOT NULL UNIQUE,
+          phone VARCHAR(20),
+          password VARCHAR(255) NOT NULL,
+          fullName VARCHAR(255) NOT NULL,
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS items (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          category VARCHAR(100) NOT NULL,
+          type ENUM('lost', 'found') NOT NULL,
+          description TEXT NOT NULL,
+          location VARCHAR(255) NOT NULL,
+          dateTime DATETIME NOT NULL,
+          contactPhone VARCHAR(20),
+          imageUrl VARCHAR(500),
+          userId INT NOT NULL,
+          relatedItemId INT,
+          status VARCHAR(50) NOT NULL DEFAULT 'active',
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (relatedItemId) REFERENCES items(id) ON DELETE SET NULL
+        )
+      `);
+    }
+
+    console.log('✓ Database tables initialized');
+  } catch (err) {
+    console.error('✗ Error initializing tables:', err.message);
+    throw err;
+  }
+};
+
 module.exports = {
   connectDB,
   getDb: () => db,

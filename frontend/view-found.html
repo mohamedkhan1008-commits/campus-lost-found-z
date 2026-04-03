@@ -160,8 +160,8 @@
                             <span class="value">${item.location}</span>
                         </div>
                         <div class="info-row">
-                            <span class="label">📅 Date:</span>
-                            <span class="value">${new Date(item.dateTime).toLocaleDateString()}</span>
+                            <span class="label">📅 Date & Time:</span>
+                            <span class="value">${new Date(item.dateTime).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute:'2-digit', hour12: true })}</span>
                         </div>
                         <div class="info-row">
                             <span class="label">👤 Found by:</span>
